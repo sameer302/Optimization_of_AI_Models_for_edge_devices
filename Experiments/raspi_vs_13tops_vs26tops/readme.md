@@ -11,3 +11,6 @@
 
 1) Vision model:- 
 2) Inference framework:-
+
+### Sub experiment 1:
+Verifying TOPS for AI HAT+

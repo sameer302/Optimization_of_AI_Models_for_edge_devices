@@ -1,0 +1,1 @@
+Camera also has a FPS speed for each input resolution so what is the relation between this and inference speed ?
