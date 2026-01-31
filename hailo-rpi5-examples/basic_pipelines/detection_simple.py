@@ -6,15 +6,36 @@ from gi.repository import Gst
 import hailo
 from hailo_apps.hailo_app_python.core.gstreamer.gstreamer_app import app_callback_class
 from hailo_apps.hailo_app_python.apps.detection_simple.detection_pipeline_simple import GStreamerDetectionApp
+import csv
+import time
 
 # User-defined class to be used in the callback function: Inheritance from the app_callback_class
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
+        self.start_time = time.time()
+        self.csv = open("npu_fps_log.csv", "w", newline="")
+        self.writer = csv.writer(self.csv)
+        self.writer.writerow(["timestamp", "frame_count", "fps"])
+
+    def log_fps(self):
+        now = time.time()
+        elapsed = now - self.start_time
+        fps = self.get_count() / elapsed if elapsed > 0 else 0.0
+        self.writer.writerow([now, self.get_count(), fps])
+
+    def close(self):
+        self.csv.close()
 
 # User-defined callback function: This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
     user_data.increment()  # Using the user_data to count the number of frames
+
+    # ---- ADD THIS BLOCK ----
+    if user_data.get_count() % 30 == 0:   # log every 30 frames
+        user_data.log_fps()
+    # -----------------------
+
     string_to_print = f"Frame count: {user_data.get_count()}\n"
     buffer = info.get_buffer()  # Get the GstBuffer from the probe info
     if buffer is None:  # Check if the buffer is valid
