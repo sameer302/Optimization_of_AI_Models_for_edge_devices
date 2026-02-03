@@ -1,5 +1,7 @@
 import argparse
 import csv
+from email import parser
+from html import parser
 import time
 import os
 import psutil
@@ -13,6 +15,26 @@ CSV_FILE = "hardware_metrics.csv"
 def get_cpu():
     return psutil.cpu_percent(interval=None)
 
+def get_cpu_freq():
+    try:
+        out = subprocess.check_output(["vcgencmd", "measure_clock", "arm"], text=True)
+        return int(out.strip().split("=")[1]) / 1e6  # MHz
+    except:
+        return None
+    
+def get_voltage():
+    try:
+        out = subprocess.check_output(["vcgencmd", "measure_volts", "core"], text=True)
+        return float(out.strip().split("=")[1].replace("V", ""))
+    except:
+        return None
+
+def get_throttled_flags():
+    try:
+        out = subprocess.check_output(["vcgencmd", "get_throttled"], text=True)
+        return out.strip().split("=")[1]  # hex flags
+    except:
+        return None
 
 def get_memory():
     return psutil.virtual_memory().percent
@@ -74,6 +96,10 @@ def main():
         default="hardware_metrics.csv",
         help="Path to output CSV file"
     )
+    parser.add_argument("--freq", action="store_true")
+    parser.add_argument("--voltage", action="store_true")
+    parser.add_argument("--throttle", action="store_true")
+
     args = parser.parse_args()
 
     csv_path = os.path.abspath(args.out)
@@ -88,6 +114,12 @@ def main():
         fields.append("memory_percent")
     if args.npu:
         fields.append("npu_utilization_percent")
+    if args.freq:
+        fields.append("cpu_freq_MHz")
+    if args.voltage:
+        fields.append("cpu_voltage_V")
+    if args.throttle:
+        fields.append("throttled_flags_hex")
 
     # Create descriptive header mapping for clarity
     header_descriptions = {
@@ -95,7 +127,10 @@ def main():
         "temperature_C": "System temperature (Celsius)",
         "cpu_percent": "CPU utilization (%)",
         "memory_percent": "Memory utilization (%)",
-        "npu_utilization_percent": "NPU utilization (%)"
+        "npu_utilization_percent": "NPU utilization (%)",
+        "cpu_freq_MHz": "CPU frequency (MHz)",
+        "cpu_voltage_V": "CPU voltage (Volts)",
+        "throttled_flags_hex": "Throttled status flags (hex)"
     }
 
     with open(csv_path, "w", newline="") as f:
@@ -115,6 +150,12 @@ def main():
             if args.npu:
                 util, fps = get_npu()
                 row["npu_utilization_percent"] = util
+            if args.freq:
+                row["cpu_freq_MHz"] = get_cpu_freq()
+            if args.voltage:
+                row["cpu_voltage_V"] = get_voltage()
+            if args.throttle:
+                row["throttled_flags_hex"] = get_throttled_flags()
 
             writer.writerow(row)
             f.flush()

@@ -3,10 +3,12 @@ import sys
 import argparse
 import glob
 import time
+import csv
 
 import cv2
 import numpy as np
 from ultralytics import YOLO
+from datetime import datetime
 
 # Define and parse user input arguments
 
@@ -23,6 +25,8 @@ parser.add_argument('--resolution', help='Resolution in WxH to display inference
                     default=None)
 parser.add_argument('--record', help='Record results from video or webcam and save it as "demo1.avi". Must specify --resolution argument to record.',
                     action='store_true')
+parser.add_argument('--csv', help='Path to CSV file for logging FPS', required=True)
+
 
 args = parser.parse_args()
 
@@ -33,6 +37,11 @@ img_source = args.source
 min_thresh = args.thresh
 user_res = args.resolution
 record = args.record
+csv_path = args.csv
+
+csv_file = open(csv_path, 'w', newline='')
+csv_writer = csv.writer(csv_file)
+csv_writer.writerow(['timestamp', 'frame_count', 'fps'])
 
 # Check if model file exists and is valid
 if (not os.path.exists(model_path)):
@@ -122,11 +131,15 @@ bbox_colors = [(164,120,87), (68,148,228), (93,97,209), (178,182,133), (88,159,1
 # Initialize control and status variables
 avg_frame_rate = 0
 frame_rate_buffer = []
-fps_avg_len = 200
+fps_avg_len = 30
 img_count = 0
+
+frame_count = 0
 
 # Begin inference loop
 while True:
+
+    frame_count += 1
 
     t_start = time.perf_counter()
 
@@ -237,6 +250,13 @@ while True:
 
     # Calculate average FPS for past frames
     avg_frame_rate = np.mean(frame_rate_buffer)
+
+    if frame_count % fps_avg_len == 0:
+        timestamp_iso = datetime.now().isoformat()
+        csv_writer.writerow([timestamp_iso, frame_count, round(avg_frame_rate, 3)])
+        csv_file.flush()
+
+csv_file.close()
 
 
 # Clean up
