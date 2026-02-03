@@ -67,7 +67,17 @@ def main():
     parser.add_argument("--npu", action="store_true")
     parser.add_argument("--duration", type=int, default=0,
                         help="seconds (0 = infinite)")
+        # NEW: output path
+    parser.add_argument(
+        "--out",
+        type=str,
+        default="hardware_metrics.csv",
+        help="Path to output CSV file"
+    )
     args = parser.parse_args()
+
+    csv_path = os.path.abspath(args.out)
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True) if os.path.dirname(csv_path) else None
 
     fields = ["timestamp"]
     if args.temp:
@@ -88,7 +98,7 @@ def main():
         "npu_utilization_percent": "NPU utilization (%)"
     }
 
-    with open(CSV_FILE, "w", newline="") as f:
+    with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()  # Always write header
 
