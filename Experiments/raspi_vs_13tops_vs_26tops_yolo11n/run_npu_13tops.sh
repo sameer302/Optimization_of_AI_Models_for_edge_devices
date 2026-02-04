@@ -3,6 +3,14 @@
 DURATION=1800  # Duration of the experiment in seconds (30 minutes)
 OUTPUT_DIR="./results"
 
+cleanup() {
+    echo "Stopping experiment..."
+    pkill -P $$        # Kill all child processes
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
 timeout $DURATION python ../system_metrics_logger.py \
   --cpu --temp --npu --memory --out "$OUTPUT_DIR/yolo11n_system_metrics_13tops.csv" &
 
