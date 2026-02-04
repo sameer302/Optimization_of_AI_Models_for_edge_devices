@@ -13,11 +13,11 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 timeout $DURATION python ../system_metrics_logger.py \
-  --cpu --temp --npu --memory --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops.csv" &
+  --cpu --temp --npu --memory --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops_image.csv" &
 
 timeout $DURATION env HAILO_MONITOR=1 python ./yolo11n_npu.py \
-  --csv "$OUTPUT_DIR/yolo11n_fps_26tops.csv" \
-  --input rpi \
+  --csv "$OUTPUT_DIR/yolo11n_fps_26tops_image.csv" \
+  --input /home/sameer/Desktop/optimization_of_ai_models/Datasets/val2017 \
   --hef-path /home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo/yolov11n_hailo8.hef &
 
 wait
