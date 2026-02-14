@@ -9,8 +9,8 @@
 
 ### Software specifications:
 
-1) Vision model:- 
-2) Inference framework:-
+1) Vision model:- YOLO11n
+2) Inference framework:- ultralytics, ncnn, hailort
 
 ### Sub experiment 1:
 Verifying TOPS for AI HAT+

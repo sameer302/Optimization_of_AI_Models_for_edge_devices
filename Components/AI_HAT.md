@@ -1,1 +1,0 @@
-We are using AI KIT which has Hailo 8L module installed on M.2 HAT+. 
