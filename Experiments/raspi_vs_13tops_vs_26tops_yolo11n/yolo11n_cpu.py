@@ -20,7 +20,7 @@ parser.add_argument('--source', help='Image source, can be image file ("test.jpg
                     required=True)
 parser.add_argument('--thresh', help='Minimum confidence threshold for displaying detected objects (example: "0.4")',
                     default=0.5)
-parser.add_argument('--resolution', help='Resolution in WxH to display inference results at (example: "640x480"), \
+parser.add_argument('--output_resolution', help='Resolution in WxH to display inference results at (example: "640x480"), \
                     otherwise, match source resolution',
                     default=None)
 parser.add_argument('--record', help='Record results from video or webcam and save it as "demo1.avi". Must specify --resolution argument to record.',

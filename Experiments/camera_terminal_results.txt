@@ -1,0 +1,27 @@
+1) Sensor-level FPS with standard settings
+
+Testing resolution: 640x480
+[1:39:18.479665836] [8574]  INFO Camera camera.cpp:1215 configuring streams: (0) 640x480-XRGB8888/SMPTE170M/Rec709/None/Full (1) 640x480-GBRG_PISP_COMP1/RAW
+[1:39:18.480093648] [8580]  INFO RPI pisp.cpp:1485 Sensor: /base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36 - Selected sensor format: 640x480-SGBRG10_1X10/RAW - Selected CFE format: 640x480-PC1g/RAW
+Sensor FrameDuration: 33302 µs
+Sensor-level FPS: 30.03
+
+Testing resolution: 1296x972
+[1:39:21.521790869] [8584]  INFO Camera camera.cpp:1215 configuring streams: (0) 1296x972-XRGB8888/Rec709/Rec709/None/Full (1) 1296x972-GBRG_PISP_COMP1/RAW
+[1:39:21.523369917] [8580]  INFO RPI pisp.cpp:1485 Sensor: /base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36 - Selected sensor format: 1296x972-SGBRG10_1X10/RAW - Selected CFE format: 1296x972-PC1g/RAW
+Sensor FrameDuration: 33326 µs
+Sensor-level FPS: 30.01
+
+Testing resolution: 1920x1080
+[1:39:24.559595197] [8584]  INFO Camera camera.cpp:1215 configuring streams: (0) 1920x1080-XRGB8888/Rec709/Rec709/None/Full (1) 1920x1080-GBRG_PISP_COMP1/RAW
+[1:39:24.562713552] [8580]  INFO RPI pisp.cpp:1485 Sensor: /base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36 - Selected sensor format: 1920x1080-SGBRG10_1X10/RAW - Selected CFE format: 1920x1080-PC1g/RAW
+Sensor FrameDuration: 33326 µs
+Sensor-level FPS: 30.01
+
+Testing resolution: 2592x1944
+[1:39:27.626034067] [8584]  INFO Camera camera.cpp:1215 configuring streams: (0) 2592x1944-XRGB8888/Rec709/Rec709/None/Full (1) 2592x1944-GBRG_PISP_COMP1/RAW
+[1:39:27.633019534] [8580]  INFO RPI pisp.cpp:1485 Sensor: /base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36 - Selected sensor format: 2592x1944-SGBRG10_1X10/RAW - Selected CFE format: 2592x1944-PC1g/RAW
+Sensor FrameDuration: 63965 µs
+Sensor-level FPS: 15.63
+
+2) Sensor-level FPS with FrameDurationLimits modified to (1000, 20000)
