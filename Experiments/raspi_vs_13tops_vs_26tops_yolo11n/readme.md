@@ -324,3 +324,107 @@ Verifying TOPS for AI HAT+
 - In the yolo11n_cpu.py script, we are not controlling the rate at which we want to send frames to our CPU but we are controlling the input resolution which indirectly controls the rate at which camera will capture and send frames. 
 
 - So I need to check if camera is the bottleneck. For this firstly I should compare sensor level fps, then capture fps i.e. fps at which python captures those frames, then record fps, then record + display fps and then inference fps so that we can clearly see at each step how muuch latency is being added.  
+
+### Observation 2 : Going above in the hierarchy to check the real bottleneck.
+
+- I started with `camera _fps_drop.py` code to note down the fps values for each level of abstraction. Here in the first run the observed values are, 
+
+========== FPS COMPARISON ==========
+Sensor                        : 30.03 FPS
+Capture                       : 34.39 FPS
+Capture + Record              : 34.49 FPS
+Capture + Display             : 28.22 FPS
+Capture + Display + Record    : 34.40 FPS
+
+- here we can observe that capturing fps is greater than the sensor fps which is not practically possible, so what exactly is happening here is that, the way our code is written, it does not guarantee that our python code captures a new frame each time, it may possibly capture the same frame twice like, F1 F1 F2 F2 F3 F3 ..... Let us see what is happening underneath for the first two processes,
+
+1️. Sensor
+   ↓
+2️. ISP (Image Signal Processor)
+   ↓
+3️. DMA writes frame into RAM buffer
+   ↓
+4. capture_array() starts
+   ↓
+5. libcamera manages a ring buffer (queue of frames)
+   ↓
+6. Picamera2 API gives frame to Python
+   ↓
+7. Numpy array is created 
+   ↓
+8. pixel data is copied into the array
+   ↓
+9. numpy array is returned 
+
+- here when we measure sensor fps we are measuring pure hardware timing. sensor exposes frame, ISP processes it, metadata contains exposure timing and finally FrameDuration is the time between exposures.
+
+- but when we measure capture fps, we measure the speed at which capture_array() grabs the latest frame from the buffer, copies it into numpy array and reeurns it. the problem here is that capture_array() does not guarantee a new sensor frame each time it returns latest available completed frame and if our loop is slower than sensor we skip frames but if it is faster then we read same frame multiple times. 
+
+- So sensor fps is controlled by just the sensor quality but capture fps is controlled by sensor fps (hard limit), libcamera internal pipeline speed (frame request handling + buffer management), DMA memory bandwidth (how fast images move from ISP to RAM), Python + numpy overhead. 
+
+- Now in order to see the true drop in capturing fps, we can either modify our code to ensure that our python loop captures new frame each time or other way round we can increase the sensor fps and then see the drop, so lets try this.
+
+
+========== FPS COMPARISON ==========
+Sensor                        : 58.92 FPS
+Capture                       : 67.49 FPS
+Capture + Record              : 67.45 FPS
+Capture + Display             : 66.91 FPS
+Capture + Display + Record    : 66.78 FPS
+
+- here again we are observing the same phenomenon which suggest that the capture_array() loop runs faster than the sensor fps limit of 59 fps. So clearly we can see that here the camera sensor is a bottleneck as it is not able to supply frames at the rate at which we are able to write it to numpy array.  
+
+- But once we are able to achieve a sensor fps higher than the buffer read speed then python would read the latest available frame in the buffer which will be a new frame and not the same frame again. It may also happen that if the sensor fps is much greater than the buffer read speed then python code wil drop some frames in between and read frames like,
+
+Sensor:  F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 ...
+Time →
+
+Python reads:
+        F2     F4     F6     F8     F10 ...
+
+- So before moving towards correcting our code, lets once see the maximum fps at which the python loop can write the frames to array. but for this we need to understand that, capture_array() is tightly coupled to libcamera which is paced by sensor frame delievery so even if CPU can go faster, capture_array() wont exceed what the pipeline feeds it. In other words, capture_array() function is specific to the camera module that we are using, hence without having a camera which has very high sensor fps speed, we cannot check the CPU limit using capture_array(). So the correct way to do this is to stimulate a program which will replicate what is being done by capture_array() and using that code we will then check what is the highest capture fps that we can measure and this will be a general benchmark applicable to all cameras. So now lets run `cpu_fps_benchmark.py` in order to see max fps at which our CPU can read from buffer, create a numpy array and return it. The results that we get are, 
+
+Resolution: 640x480
+Duration: 5s
+
+===== CPU Capture-Equivalent Throughput =====
+Memory Copy FPS: 7808.24
+
+
+
+
+Resolution: 1296x972
+Duration: 5s
+
+===== CPU Capture-Equivalent Throughput =====
+Memory Copy FPS: 1763.88
+
+
+
+
+Resolution: 1920x1080
+Duration: 5s
+
+===== CPU Capture-Equivalent Throughput =====
+Memory Copy FPS: 1025.20
+
+
+
+
+Resolution: 2592x1944
+Duration: 5s
+
+===== CPU Capture-Equivalent Throughput =====
+Memory Copy FPS: 425.46
+
+- so this is what our SBC is capable of, if we have a camera which can provided frames at this speed and further if we have a model which can run inference at this speed then with the given hardware, this is the maximum fps that we can achieve for the given resolution. 
+
+- This speed is actually in accordance with the bandwidth of the RAM supported by the SBC (LPDDR4X). Here the data transfer is occuring as, CPU loads data from RAM into cache, CPU writes data back to another RAM region and memory controller handles the transfer. If we want we can also calculate the bandwidth of data transfer occuring at the given fps value. 
+
+- Lets say we use the pixel format as, XRGB8888, this means 8 bits for R, 8 bits for G, 8 bits for B, 8 bits unused (X padding) -> 4 bytes per pixel. There are other pixel formats also but this one is used because memory alignment is faster, SIMD instructions work better and it avoids padding issues. 
+
+- So for (640 x 480), one frame will occupy nearly 640 x 480 x 4 bytes = 1.17 MB per frame. The measured fps at this resolution was 7808.24, this implies bandwidth = 1.17 MB x 7808 = 8.9 GB/s. Now the thereotical bandwidth of LPDDR4X is around 34 GB/s so the observed bandwidth in our case is completely realistic.
+
+- Now two questions will arise here, firstly can we increase this speed for the same DRAM being used and secondly will using other faster DRAM increase the fps further ?
+
+- The answer to the first question is, yes, better optimized code can increase the throughput further but it will still be capped by the upper limit of hardware. By using Pure C, or optimized C extensions or multithreading, or avoiding repeated allocations or multithreading. Using these techniques we may reach to nearly 12~15 GB/s but to exceed further then comes the answer to our second question, yes we need a faster DRAM so that even if we achieve 25 % of it's maximum value still it will be more than what we were able to achieve before.
