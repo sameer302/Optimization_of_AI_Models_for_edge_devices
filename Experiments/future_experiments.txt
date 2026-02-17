@@ -1,0 +1,4 @@
+1) check with higher sensor fps camera
+2) for the same camera try with different pixel representation so that it occupies less space
+3) try with different speed DRAM in order to gain speed up in CPU processing
+4) for the same DRAM try wth different optimized code in order to utlize the complete available bandwidth
