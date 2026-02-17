@@ -321,10 +321,6 @@ Verifying TOPS for AI HAT+
 
 - So now firstly by modifying the values of ExposureTime and FrameDuration, we can control the rate at which frames will be captured at the lowest level or closest to the hardware or sensor. This is necessary because if we want to find out other bottlenecks in our inference pipeline we should make sure that camera is working at its max speed but if increasing fps speed from camera does not benifit in increasing fps then it means the bottleneck is present in the further pipeline.
 
-- In the yolo11n_cpu.py script, we are not controlling the rate at which we want to send frames to our CPU but we are controlling the input resolution which indirectly controls the rate at which camera will capture and send frames. 
-
-- So I need to check if camera is the bottleneck. For this firstly I should compare sensor level fps, then capture fps i.e. fps at which python captures those frames, then record fps, then record + display fps and then inference fps so that we can clearly see at each step how muuch latency is being added.  
-
 ### Observation 2 : Going above in the hierarchy to check the real bottleneck.
 
 - I started with `camera _fps_drop.py` code to note down the fps values for each level of abstraction. Here in the first run the observed values are, 
@@ -338,11 +334,11 @@ Capture + Display + Record    : 34.40 FPS
 
 - here we can observe that capturing fps is greater than the sensor fps which is not practically possible, so what exactly is happening here is that, the way our code is written, it does not guarantee that our python code captures a new frame each time, it may possibly capture the same frame twice like, F1 F1 F2 F2 F3 F3 ..... Let us see what is happening underneath for the first two processes,
 
-1️. Sensor
+1. Sensor
    ↓
-2️. ISP (Image Signal Processor)
+2. ISP (Image Signal Processor)
    ↓
-3️. DMA writes frame into RAM buffer
+3. DMA writes frame into RAM buffer
    ↓
 4. capture_array() starts
    ↓
