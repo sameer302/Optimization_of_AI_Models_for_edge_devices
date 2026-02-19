@@ -35,7 +35,7 @@ args = parser.parse_args()
 model_path = args.model
 img_source = args.source
 min_thresh = args.thresh
-user_res = args.resolution
+user_res = args.output_resolution
 record = args.record
 csv_path = args.csv
 
