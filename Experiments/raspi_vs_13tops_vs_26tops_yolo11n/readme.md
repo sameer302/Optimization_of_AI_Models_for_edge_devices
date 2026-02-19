@@ -19,18 +19,68 @@ Verifying TOPS for AI HAT+
 
 ### Observation 1 : Camera as bottleneck
 
-- The first bottleneck that may arise in the inference pipeline is the rate at which frames are being captured and sent to the CPU by the camera.
+- Firstly to claim that there are any bottlenecks I need to show that there are some official numbers noted down by people based on some experimental observations and when I am repeating that experiment am unable to get those numbers and hence there must be some bottlenecks in my pipeline which are stopping me from achieveing those numbers.
 
-- For the camera that we are using, ov5647, rate of capturing frame depends on the input resolution that we want. The exact details are, 
+- so for now, I am benchmarking yolo11n model on HAILO 8L NPU and HAILO 8 NPU. For now lets go with HAILO 8 NPU and then we can follow similar method with HAILO 8L NPU also. 
 
-    Available cameras  
-    0 : ov5647 [2592x1944 10-bit GBRG] (/base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36)
-        Modes: 'SGBRG10_CSI2P' : 640x480 [58.92 fps - (16, 0)/2560x1920 crop]
-                                1296x972 [46.34 fps - (0, 0)/2592x1944 crop]
-                                1920x1080 [32.81 fps - (348, 434)/1928x1080 crop]
-                                2592x1944 [15.63 fps - (0, 0)/2592x1944 crop]
+- so one of the important metrics that we need to consider when talking about NPUs' is TOPS (since NPU's are designed to operate on INT8 numbers). For HAILO 8, the advertized TOPS are 26 TOPS. This is the capacity of number of operations (each addition and multiply operation between two numbers, usually we count the number of MAC (multiply-accumulate) operations in our network and then considering 1 MAC = 2 operations we get the final count of TOPS). Now to find the thereotical maximum TOPS that we can achieve, we just look at the hardware specifications without running any code. For example, TOPS = N x F x 2 / 10^12, where N is the number of MAC units, F is the frequency at which each MAC unit is running and multiplication with 2 since each MAC comprises of two operations. Now particularly for HAILO 8 they have not publicly released the internal architecture from which we can verify the 26 TOPS speed but the main intuition is that this number is obtained from pure hardware specifications and not by running some code. This also makes this number host system independent as it is purely based on mathematical compute capacity. 
 
-- what happens here is that we decide the exact input resolution and then the camera selects the sensor mode matching that resolution or if we choose any arbitray resolution then the camera matches it with nearest sensor mode, captures the frame and then scales it to the desired resolution. Now each sensor mode has a fixed maximum FPS. Hence resolution directly determines max FPS. 
+- apart from the hardware specs derived speed, if we want to know the maximum possible speed then we should have a highly optimized code which will utilize the accelerator at its best and further we should also just consider the inference throughput that is obtained on the accelerator in order to eliminate any intermediate bottlenecks. Hailo has some in-built benchmarks present in Hailo Benchmark and TAPPAS library. Using these we can measure the isolated inference throughpt. 
+
+- we should explore Hailo Benchmark and TAPPAS library in order to find these benchmarking limits. 
+
+
+
+
+
+
+
+Now to measure the TOPS speed of our NPU, we will have to run some code on it, then observe how much time it takes to completely run that code and then divide the number of operations present in that code by the time taken. This will give us the TOPS speed. 
+
+- now we know that we can't run any normal code on the NPU but specially optimized codes generated using dataflow compiler (.hef file). Now these .hef files for almost all the standard object detection models (I am choosing vision models for now) are present on the HAILO MODEL ZOO https://github.com/hailo-ai/hailo_model_zoo/blob/master/docs/public_models/HAILO8/HAILO8_object_detection.rst 
+
+- but this is not all what is provided by hailo model zoo, they ran each of these model on a standard host system (System host: Intel® Core™ i5-9400 CPU @ 2.90GHz) and noted down the performance numbers obtained by them. If we look for yolo11n we can see, `yolov11n(model name)  39.0(mAP, Full Precision)  1.2(hardware degradation)  185(fps for batch size = 1)  539(fps for batch size = 2)  640x640x3(input resolution)  2.6(number of parameters in millions) 	6.55(number of operations per frame in giga)`
+
+- here if we look at the concept of hardware degradation we get to know of a very important concept. firstly, hardware degradation is the performance drop due to hardware constraints after compilation. formula for hardware degradation is, 
+`degradation = ideal theoretical fps / measured hardware fps` . We can calculate measured fps by running the model on our device but for ideal fps we may think that it would be in accordance to achieving 26 TOPS but that is not the case. What happens here is that, compiler(hailo dataflow compiler) estimates theoretical maximum FPS for any particular model assuming perfect scheduling on the hardware, this is done by analyzing the model in terms of model graph, layer shapes, parallel unit mapping, etc. This gives us the ideal FPS. In most of the cases it wont be near to the maximum 26 TOPS speed and we will shortly see why this is so. 
+
+- So coming back to the per model specifications that we have in the git repo, 
+`yolov11n(model name)  39.0(mAP, Full Precision)  1.2(hardware degradation)  185(fps for batch size = 1)  539(fps for batch size = 8)  640x640x3(input resolution)  2.6(number of parameters in millions) 	6.55(number of operations per frame in giga)` here if we multiply single batch fps speed with (185) with number of operations (6.55G) we get a TOPS speed of, 1.2 TOPS! ok lets do this for batch size = 8, then we get a speed of, 3.5 TOPS! ok lets consider the effect of hardware degradation, then for batch size = 1, new fps = 1.2 x 185 = 222 fps this implies speed = 1.45 TOPS! and for batch size = 8, new fps = 1.2 x 539 = 646.8 this implies speed = 4.2 TOPS. So the highest we can achieve with the given model is 4.2 TOPS. 
+
+- Now we may think there must be some problem with the model due to which it is unable to give us the desired speed. So we look at a model with highest fps value which will surely be for batch size = 8.
+`tiny_yolov4 	19.2 	1.5 	1472 	1472 	416x416x3 	6.05 	6.92`
+here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fps, this implies speed = 15 TOPS! 
+
+- so even in the best possible scenario we are not able to achieve the speed near to 26 TOPS. This raises two questions, first that how did those people claim of having the speed of 26 TOPS and secondly why are these models, even in the ideal case not able to achieve that TOPS speed ?
+
+- the answer to the first question is when they claim the speed of 26 TOPS, they are just considering the hardware or accelerator inference and no other stage of pipeline like no camera, no preprocessing, no postprocessing moreover they run compute-saturating highly parallelized code which is written in a way to utilize the hardware in best possible way and hence they are able to achieve that number. But the real world models like YOLO have many small feature maps, use depthwise convolutions, etc. which reduces the utilization of hardware and we are not able to achieve the maximum possible speed. 
+
+- One more thought that arises here is that, when we are considering the concept of running inference on data (image frames in this case) then this input data can come in a variety of ways, it can be set of images, or a video or live camera feed. But as for the 26 TOPS scenario (and even for the benchmarks given on the official git repo which we will look at soon) the part of acquiring input data has no role as we assume that the data is already present in our host system and now we are just measuring the speed at which a frame sent to the accelerator returns back as a processed frame. 
+
+- ok so we concluded that the 26 TOPS speed is pure inference speed on the AI accelerator without any consideration to the host system. Then we may think even the per model numbers that are displayed on the official git repo are also just the inference performance but mostly that is not the case because they have mentioned about the host system i.e., `System host: Intel® Core™ i5-9400 CPU @ 2.90GHz`. So we can say that these per model benchmarks are host system dependent. This wont make a very big difference but still it matters
+
+
+
+
+
+
+
+
+- now one way I tried doing this was running yolo11n model, get the FPS count and then multiply it with the number of operations performed per frame so that finally I get the TOPS speed but here one problem that arised was due to some bottlenecks in my pipeline (camera -> CPU -> NPU) the number of frames that I was able to supply to the NPU was much less than what it can efficiently process and so the fps count that I got was just the fps count that I supplied to the NPU and it was not the true representation of the TOPS speed. I can say its the real world TOPS speed (which was somewhere around 0.3 TOPS) but still I can't say it was the most optimized speed that I can achieve with the given hardware. 
+
+- ok then we might think that if the hardware or pipeline is the issue, lets use the best available hardware and then check the TOPS speed. For this if we check the official hailo model zoo repo, https://github.com/hailo-ai/hailo_model_zoo/blob/master/docs/public_models/HAILO8/HAILO8_object_detection.rst , here they have given the fps speed and the number of operations per frame, and all these numbers are obtained on, as mentioned on their website, `System host: Intel® Core™ i5-9400 CPU @ 2.90GHz` so no doubt it is powerful in terms of processing. But even with this efficient pipeline, when we multiply the fps (185, for batch size = 1) with number of operations (6.55 GOPS) we get a speed of 1.2 TOPS. Moreover this speed is inconsistent across models. 
+
+- the reason 
+
+- Ok but then what is the best way to observe this highest possible TOPS speed ? the answer to this question is to run a synthetic stress workload. No camera, no preprocessing, no postprocessing, no display, just the inference loop. 
+
+
+
+
+
+
+
+
 
 - there are following levels at which fps speed will differ, 
     1) hardware or sensor speed (fastest)
@@ -42,7 +92,20 @@ Verifying TOPS for AI HAT+
     7) inference + display
     9) inference + record + display (slowest)
 
-- initially, by default the configuration of camera is such that the sensor speed at each input resolution is pre-fixed. To understand this we need to know about some parameters related to camera which determine the sensor speed and image quality
+- The first bottleneck that may arise in the inference pipeline is the rate at which frames are being captured and sent to the CPU by the camera.
+
+- For the camera that we are using, OV5647, rate of capturing frame depends on the input resolution that we want. The exact details are, 
+
+    Available cameras  
+    0 : ov5647 [2592x1944 10-bit GBRG] (/base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36)
+        Modes: 'SGBRG10_CSI2P' : 640x480 [58.92 fps - (16, 0)/2560x1920 crop]
+                                1296x972 [46.34 fps - (0, 0)/2592x1944 crop]
+                                1920x1080 [32.81 fps - (348, 434)/1928x1080 crop]
+                                2592x1944 [15.63 fps - (0, 0)/2592x1944 crop]
+
+- what happens here is that we decide the exact input resolution and then the camera selects the sensor mode matching that resolution or if we choose any arbitrary resolution then the camera matches it with nearest resolution and corresponding sensor mode, captures the frame and then scales it to the desired resolution. Now each sensor mode has a fixed maximum FPS. Hence resolution directly determines max FPS. 
+
+- initially, by default the configuration of camera is such that the sensor fps speed at each input resolution is pre-fixed. To understand this we need to know about some parameters related to camera which determine the sensor speed and image quality
 
     1) ExposureTime (Shutter Time) : 
         - how long the sensor collects light for each frame. 
@@ -52,15 +115,6 @@ Verifying TOPS for AI HAT+
         - by default AeEnable parameter is set to True and so it adjusts its value according to surrounding lighting. 
         - but this adjustment is by default slow and it also affects the FrameDuration as ExposureTime <= FrameDuration.
         - range of values allowed for ExposureTime as, (min, max, default) at different resolutions can be found out by running the `camera_default.py` script. This will print the current parameter values and also the default values. After running this script we can see the output as 
-
-
-
-        Available Sensor Modes:
-
-        0: Resolution = (640, 480) | Max FPS ≈ 58.92
-        1: Resolution = (1296, 972) | Max FPS ≈ 46.34
-        2: Resolution = (1920, 1080) | Max FPS ≈ 32.81
-        3: Resolution = (2592, 1944) | Max FPS ≈ 15.63
 
 
 
