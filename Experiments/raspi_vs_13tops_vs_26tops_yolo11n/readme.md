@@ -177,6 +177,9 @@ here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fp
 
 
         - here firstly we can see that the default value of AeEnable is True, also the runtime value of ExposureTime is 33216 microseconds which is different from the default value of 20000 (except the last case). This is because the default value of FrameDuration is ~33 microsec (~30 fps) and so Ae tries to use full frame time for light collection. 
+        - the video quality that we get for each input resolution can be seen by running the `camera_capture.py` code which has functionality for both capturing video and images. 
+
+        
         - if we keep the Ae set to true but remove the constraint from FrameDurationLimits and set it to its natural overall range i.e., (16971, 3067365) then we get the results as, 
 
 
