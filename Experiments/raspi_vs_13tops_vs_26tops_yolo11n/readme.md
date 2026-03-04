@@ -29,6 +29,13 @@ Verifying TOPS for AI HAT+
 
 - we should explore Hailo Benchmark and TAPPAS library in order to find these benchmarking limits. 
 
+- So while setting up AI software on raspberry pi 5 we followed the instructions given on https://www.raspberrypi.com/documentation/computers/ai.html#hardware 
+Accordingly we had installed hailo-all which is a meta-package and comprises of many packages such as, hailort, hailo-tappas-core, rpicam-apps-hailo-postprocess, etc.
+
+- So if we do `hailo --h` we will get to see all the possible commands that come with hailo, one of those command is benchmark. So when we write `hailo benchmark path_to_hef`, it will run that particular compiled model on AI accelerator and we will get the raw accelerator specific inference throughput in terms of FPS and latency. So it will send some dummy data, process it and get it back, thats how it calculates that throughput. 
+
+
+
 
 
 
@@ -57,7 +64,7 @@ here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fp
 
 - One more thought that arises here is that, when we are considering the concept of running inference on data (image frames in this case) then this input data can come in a variety of ways, it can be set of images, or a video or live camera feed. But as for the 26 TOPS scenario (and even for the benchmarks given on the official git repo which we will look at soon) the part of acquiring input data has no role as we assume that the data is already present in our host system and now we are just measuring the speed at which a frame sent to the accelerator returns back as a processed frame. 
 
-- ok so we concluded that the 26 TOPS speed is pure inference speed on the AI accelerator without any consideration to the host system. Then we may think even the per model numbers that are displayed on the official git repo are also just the inference performance but mostly that is not the case because they have mentioned about the host system i.e., `System host: Intel® Core™ i5-9400 CPU @ 2.90GHz`. So we can say that these per model benchmarks are host system dependent. This wont make a very big difference but still it matters
+- ok so we concluded that the 26 TOPS speed is pure inference speed on the AI accelerator without any consideration to the host system. Then we may think even the per model numbers that are displayed on the official git repo are also just the inference performance but mostly that is not the case because they have mentioned about the host system i.e., `System host: Intel® Core™ i5-9400 CPU @ 2.90GHz`. So we can say that these per model benchmarks are host system dependent. This wont make a very big difference but still it matters.
 
 
 
@@ -239,7 +246,7 @@ here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fp
 
 
 
-        - initially as there was constraint on the FrameDurationLimits due to which FrameDuration was restricted to ~33 microsec, hence even though Ae was set to true it was not able to increase ExposureTime beyond 33 microsec, but now when we removed the constraint from FrameDuration, Ae showed it's effect and it chose a high value of ~ 66 microsec and accordingly FrameDuration also adjusts it's time to match the relation ExposureTime <= FrameDuration. 
+        - initially as there was constraint on the FrameDurationLimits due to which FrameDuration was restricted to ~33 microsec, hence even though Ae was set to true it was not able to increase ExposureTime beyond 33 microsec, but now when we removed the constraint from FrameDuration, Ae showed it's effect and it chose a high value of ~66 microsec and accordingly FrameDuration also adjusts it's time to match the relation ExposureTime <= FrameDuration. 
         - So ideally this is the best case scenario where camera tries to capture the best bright image which will eventually help in better inference but this comes at a cost of reduced fps. But this is not a universal problem, for the same quality of bright image we may have other cameras which require less exposure time and eventually give better fps. The relation here is, Light ∝ ExposureTime x Sensitivity. So in order to achieve better light with less exposure time we need to use lens with better sensitivity . 
 
         - Now in next case, we set AeEnable to False while let the constraints on FrameDuration be as it is, lets see what we get in this case, 
