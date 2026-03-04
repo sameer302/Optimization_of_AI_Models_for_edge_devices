@@ -23,7 +23,10 @@ parser.add_argument('--thresh', help='Minimum confidence threshold for displayin
 parser.add_argument('--output_resolution', help='Resolution in WxH to display inference results at (example: "640x480"), \
                     otherwise, match source resolution',
                     default=None)
-parser.add_argument('--record', help='Record results from video or webcam and save it as "demo1.avi". Must specify --resolution argument to record.',
+parser.add_argument('--capture_resolution', help='Resolution in WxH to capture from video or USB camera source (example: "1280x720"), \
+                    otherwise, use source default resolution',
+                    default=None)
+parser.add_argument('--record', help='Record results from video or webcam and save it as "demo1.avi". Must specify --output_resolution argument to record.',
                     action='store_true')
 parser.add_argument('--csv', help='Path to CSV file for logging FPS', required=True)
 
@@ -36,6 +39,7 @@ model_path = args.model
 img_source = args.source
 min_thresh = args.thresh
 user_res = args.output_resolution
+capture_res = args.capture_resolution
 record = args.record
 csv_path = args.csv
 
@@ -77,11 +81,16 @@ else:
     print(f'Input {img_source} is invalid. Please try again.')
     sys.exit(0)
 
-# Parse user-specified display resolution
-resize = False
+# Parse user-specified display (output) resolution
+resize_output = False
 if user_res:
-    resize = True
+    resize_output = True
     resW, resH = int(user_res.split('x')[0]), int(user_res.split('x')[1])
+
+# Parse user-specified capture resolution
+cap_resW, cap_resH = None, None
+if capture_res:
+    cap_resW, cap_resH = int(capture_res.split('x')[0]), int(capture_res.split('x')[1])
 
 # Check if recording is valid and set up recording
 if record:
@@ -89,7 +98,7 @@ if record:
         print('Recording only works for video and camera sources. Please try again.')
         sys.exit(0)
     if not user_res:
-        print('Please specify resolution to record video at.')
+        print('Please specify --output_resolution to record video at.')
         sys.exit(0)
     
     # Set up recording
@@ -113,21 +122,18 @@ elif source_type == 'video' or source_type == 'usb':
     elif source_type == 'usb': cap_arg = usb_idx
     cap = cv2.VideoCapture(cap_arg)
 
-    # After cap = cv2.VideoCapture(...)
-    capture_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    capture_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
-    print(f"Camera capture resolution: {capture_width} x {capture_height}")
-
-    # Set camera or video resolution if specified by user
-    if user_res:
-        ret = cap.set(3, resW)
-        ret = cap.set(4, resH)
+    # Set camera or video capture resolution if specified by user
+    if capture_res:
+        ret = cap.set(3, cap_resW)
+        ret = cap.set(4, cap_resH)
 
 elif source_type == 'picamera':
     from picamera2 import Picamera2
     cap = Picamera2()
-    cap.configure(cap.create_video_configuration(main={"format": 'XRGB8888', "size": (resW, resH)}))
+    # Use capture resolution for picamera if specified, otherwise fall back to output resolution
+    pic_w = cap_resW if cap_resW else (resW if resize_output else 640)
+    pic_h = cap_resH if cap_resH else (resH if resize_output else 480)
+    cap.configure(cap.create_video_configuration(main={"format": 'XRGB8888', "size": (pic_w, pic_h)}))
     cap.start()
 
 # Set bounding box colors (using the Tableu 10 color scheme)
@@ -177,16 +183,16 @@ while True:
             print('Unable to read frames from the Picamera. This indicates the camera is disconnected or not working. Exiting program.')
             break
 
-    # Resize frame to desired display resolution
-    if resize == True:
-        frame = cv2.resize(frame,(resW,resH))
-
     if frame_count == 1:
-      inf_h, inf_w = frame.shape[:2]
-      print(f"Resolution sent to inference: {inf_w} x {inf_h}")
-  
-    # Run inference on frame
+        inf_h, inf_w = frame.shape[:2]
+        print(f"Resolution sent to inference: {inf_w} x {inf_h}")
+
+    # Run inference on frame (at native capture resolution)
     results = model(frame, verbose=False)
+
+    # Resize frame to desired display/output resolution AFTER inference
+    if resize_output:
+        frame = cv2.resize(frame, (resW, resH))
 
     # Extract results
     detections = results[0].boxes
@@ -203,6 +209,16 @@ while True:
         xyxy = xyxy_tensor.numpy().squeeze() # Convert tensors to Numpy array
         xmin, ymin, xmax, ymax = xyxy.astype(int) # Extract individual coordinates and convert to int
 
+        # Scale bounding box coordinates if output resolution differs from capture resolution
+        if resize_output:
+            src_h, src_w = results[0].orig_shape
+            x_scale = resW / src_w
+            y_scale = resH / src_h
+            xmin = int(xmin * x_scale)
+            ymin = int(ymin * y_scale)
+            xmax = int(xmax * x_scale)
+            ymax = int(ymax * y_scale)
+
         # Get bounding box class ID and name
         classidx = int(detections[i].cls.item())
         classname = labels[classidx]
@@ -211,7 +227,7 @@ while True:
         conf = detections[i].conf.item()
 
         # Draw box if confidence threshold is high enough
-        if conf > 0.5:
+        if conf > float(min_thresh):
 
             color = bbox_colors[classidx % 10]
             cv2.rectangle(frame, (xmin,ymin), (xmax,ymax), color, 2)
