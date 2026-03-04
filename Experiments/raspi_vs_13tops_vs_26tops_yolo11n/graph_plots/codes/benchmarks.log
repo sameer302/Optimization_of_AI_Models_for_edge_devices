@@ -1,0 +1,25 @@
+
+Benchmarks complete for /home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo11/yolo11n.pt on coco8.yaml at imgsz=640 (283.88s)
+Benchmarks legend:  - ✅ Success  - ❎ Export passed but validation failed  - ❌️ Export failed
++---------------------------------------------------------------------------------------------------------+
+|      Format                  Status❔   Size (MB)   metrics/mAP50-95(B)   Inference time (ms/im)   FPS  |
++=========================================================================================================+
+| 1    PyTorch                 ✅         5.4         0.61                  395.91                   2.53 |
+| 2    TorchScript             ✅         10.5        0.6082                510.89                   1.96 |
+| 3    ONNX                    ✅         10.2        0.6082                424.79                   2.35 |
+| 4    OpenVINO                ✅         10.4        0.6091                115.89                   8.63 |
+| 5    TensorRT                ❌         0.0         -                     -                        -    |
+| 6    CoreML                  ❌         0.0         -                     -                        -    |
+| 7    TensorFlow SavedModel   ❌         0.0         -                     -                        -    |
+| 8    TensorFlow GraphDef     ❌         0.0         -                     -                        -    |
+| 9    TensorFlow Lite         ❌         0.0         -                     -                        -    |
+| 10   TensorFlow Edge TPU     ❌         0.0         -                     -                        -    |
+| 11   TensorFlow.js           ❌         0.0         -                     -                        -    |
+| 12   PaddlePaddle            ❌         0.0         -                     -                        -    |
+| 13   MNN                     ✅         10.1        0.6118                126.85                   7.88 |
+| 14   NCNN                    ✅         10.2        0.6239                101.12                   9.89 |
+| 15   IMX                     ❌         0.0         -                     -                        -    |
+| 16   RKNN                    ❌         0.0         -                     -                        -    |
+| 17   ExecuTorch              ✅         10.2        0.6082                288.03                   3.47 |
+| 18   Axelera                 ❌         0.0         -                     -                        -    |
++---------------------------------------------------------------------------------------------------------+
