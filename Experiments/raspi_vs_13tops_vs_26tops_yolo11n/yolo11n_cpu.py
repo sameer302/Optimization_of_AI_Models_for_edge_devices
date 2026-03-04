@@ -113,6 +113,12 @@ elif source_type == 'video' or source_type == 'usb':
     elif source_type == 'usb': cap_arg = usb_idx
     cap = cv2.VideoCapture(cap_arg)
 
+    # After cap = cv2.VideoCapture(...)
+    capture_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    capture_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    print(f"Camera capture resolution: {capture_width} x {capture_height}")
+
     # Set camera or video resolution if specified by user
     if user_res:
         ret = cap.set(3, resW)
@@ -175,6 +181,10 @@ while True:
     if resize == True:
         frame = cv2.resize(frame,(resW,resH))
 
+    if frame_count == 1:
+      inf_h, inf_w = frame.shape[:2]
+      print(f"Resolution sent to inference: {inf_w} x {inf_h}")
+  
     # Run inference on frame
     results = model(frame, verbose=False)
 
