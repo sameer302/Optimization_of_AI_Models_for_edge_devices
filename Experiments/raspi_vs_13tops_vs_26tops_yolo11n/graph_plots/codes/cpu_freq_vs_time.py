@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-csv_file = "/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/yolo11n_camera_results/yolo11n_system_metrics_cpu_pt.csv"
+csv_file = "/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/yolo11n_camera_results/yolo11n_system_metrics_26tops.csv"
 
 df = pd.read_csv(csv_file)
 
@@ -41,7 +41,7 @@ plt.ylim(2.35, 2.45)
 plt.xticks(rotation=30)
 plt.tight_layout()
 
-plt.savefig("cpu_frequency_vs_time_clean.png", dpi=300)
+plt.savefig("cpu_frequency_vs_time.png", dpi=300)
 plt.show()
 
 print("CPU frequency plot saved.")

@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-csv_file = "/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/yolo11n_camera_more_objects_results/yolo11n_system_metrics_cpu_pt_1.csv"
+csv_file = "/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/yolo11n_camera_more_objects_results/yolo11n_system_metrics_cpu_pt.csv"
 
 df = pd.read_csv(csv_file)
 df["timestamp"] = pd.to_datetime(df["timestamp"])
@@ -28,7 +28,7 @@ plt.legend()
 plt.xticks(rotation=30)
 plt.tight_layout()
 
-plt.savefig("cpu_percent_vs_time_clean.png", dpi=300)
+plt.savefig("cpu_percent_vs_time.png", dpi=300)
 plt.close()
 
 
@@ -48,7 +48,7 @@ plt.legend()
 plt.xticks(rotation=30)
 plt.tight_layout()
 
-plt.savefig("memory_percent_vs_time_clean.png", dpi=300)
+plt.savefig("memory_percent_vs_time.png", dpi=300)
 plt.close()
 
 print("CPU and Memory plots saved.")

@@ -7,3 +7,4 @@
 2026-03-03 17:17:22,537 - INFO - base_utils.py:54 - (hailo) Running command 'run' with 'hailortcli'
 2026-03-03 17:55:11,231 - INFO - base_utils.py:54 - (hailo) Running command 'monitor' with 'hailortcli'
 2026-03-03 17:55:40,385 - INFO - base_utils.py:54 - (hailo) Running command 'monitor' with 'hailortcli'
+2026-03-05 11:13:07,771 - INFO - base_utils.py:54 - (hailo) Running command 'benchmark' with 'hailortcli'

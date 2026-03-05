@@ -66,6 +66,15 @@ def app_callback(pad, info, user_data):
 
     user_data.increment()  # Using the user_data to count the number of frames
 
+    # ADD THIS BLOCK - runs only on first frame
+    if user_data.get_count() == 1:
+        caps = pad.get_current_caps()
+        if caps:
+            structure = caps.get_structure(0)
+            width = structure.get_value('width')
+            height = structure.get_value('height')
+            print(f"\n>>> Camera capture resolution: {width} x {height}\n")
+
     # ---- ADD THIS BLOCK ----
     if user_data.get_count() % 30 == 0:   # log every 30 frames
         user_data.log_fps()
