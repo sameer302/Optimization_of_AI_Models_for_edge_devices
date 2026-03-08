@@ -1,7 +1,5 @@
 import argparse
 import csv
-from email import parser
-from html import parser
 import time
 import os
 import psutil
@@ -9,7 +7,6 @@ import subprocess
 from datetime import datetime
 
 LOG_INTERVAL = 1  # seconds
-CSV_FILE = "hardware_metrics.csv"
 
 
 def get_cpu():
@@ -39,7 +36,6 @@ def get_throttled_flags():
 def get_memory():
     return psutil.virtual_memory().percent
 
-
 def get_temp():
     temps = psutil.sensors_temperatures()
     if not temps:
@@ -48,7 +44,6 @@ def get_temp():
         if sensor:
             return sensor[0].current
     return None
-
 
 def get_npu():
     try:
@@ -81,30 +76,70 @@ def get_npu():
         return None, None
 
 
+# --- Hailo device handle (initialized once if needed) ---
+_hailo_device = None
+
+def _get_hailo_device():
+    global _hailo_device
+    if _hailo_device is None:
+        try:
+            from hailo_platform import Device
+            _hailo_device = Device()
+        except Exception as e:
+            print(f"[WARNING] Could not initialize Hailo device: {e}")
+            _hailo_device = False  # Mark as failed so we don't retry
+    return _hailo_device if _hailo_device else None
+
+
+def get_hailo_temp():
+    """Get Hailo chip temperature in Celsius via ts0_temperature sensor."""
+    device = _get_hailo_device()
+    if device is None:
+        return None
+    try:
+        return device.control.get_chip_temperature().ts0_temperature
+    except Exception:
+        return None
+
+
+def get_hailo_clock():
+    """Get Hailo neural network core clock rate in MHz."""
+    device = _get_hailo_device()
+    if device is None:
+        return None
+    try:
+        info = device.control.get_extended_device_information()
+        # Parse "Neural Network Core Clock Rate: 400.0MHz" from string representation
+        for line in str(info).splitlines():
+            if "Neural Network Core Clock Rate" in line:
+                # Extract numeric value before "MHz"
+                clock_str = line.split(":")[1].strip().replace("MHz", "")
+                return float(clock_str)
+        return None
+    except Exception:
+        return None
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--temp", action="store_true")
-    parser.add_argument("--cpu", action="store_true")
-    parser.add_argument("--memory", action="store_true")
-    parser.add_argument("--npu", action="store_true")
-    parser.add_argument("--duration", type=int, default=0,
-                        help="seconds (0 = infinite)")
-        # NEW: output path
-    parser.add_argument(
-        "--out",
-        type=str,
-        default="hardware_metrics.csv",
-        help="Path to output CSV file"
-    )
-    parser.add_argument("--freq", action="store_true")
-    parser.add_argument("--voltage", action="store_true")
-    parser.add_argument("--throttle", action="store_true")
+    parser.add_argument("--temp", action="store_true", help="Log CPU/system temperature")
+    parser.add_argument("--cpu", action="store_true", help="Log CPU utilization")
+    parser.add_argument("--memory", action="store_true", help="Log memory utilization")
+    parser.add_argument("--npu", action="store_true", help="Log NPU utilization via hailortcli")
+    parser.add_argument("--freq", action="store_true", help="Log CPU frequency")
+    parser.add_argument("--voltage", action="store_true", help="Log CPU core voltage")
+    parser.add_argument("--throttle", action="store_true", help="Log throttled status flags")
+    parser.add_argument("--hailo-temp", action="store_true", help="Log Hailo chip temperature (C)")
+    parser.add_argument("--hailo-clock", action="store_true", help="Log Hailo neural core clock rate (MHz)")
+    parser.add_argument("--duration", type=int, default=0, help="Duration in seconds (0 = infinite)")
+    parser.add_argument("--out", type=str, default="hardware_metrics.csv", help="Path to output CSV file")
 
     args = parser.parse_args()
 
     csv_path = os.path.abspath(args.out)
     os.makedirs(os.path.dirname(csv_path), exist_ok=True) if os.path.dirname(csv_path) else None
 
+    # Build CSV fields based on selected flags
     fields = ["timestamp"]
     if args.temp:
         fields.append("temperature_C")
@@ -120,22 +155,14 @@ def main():
         fields.append("cpu_voltage_V")
     if args.throttle:
         fields.append("throttled_flags_hex")
-
-    # Create descriptive header mapping for clarity
-    header_descriptions = {
-        "timestamp": "ISO8601 timestamp",
-        "temperature_C": "System temperature (Celsius)",
-        "cpu_percent": "CPU utilization (%)",
-        "memory_percent": "Memory utilization (%)",
-        "npu_utilization_percent": "NPU utilization (%)",
-        "cpu_freq_MHz": "CPU frequency (MHz)",
-        "cpu_voltage_V": "CPU voltage (Volts)",
-        "throttled_flags_hex": "Throttled status flags (hex)"
-    }
+    if args.hailo_temp:
+        fields.append("hailo_temp_C")
+    if args.hailo_clock:
+        fields.append("hailo_clock_MHz")
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
-        writer.writeheader()  # Always write header
+        writer.writeheader()
 
         start = time.time()
         while True:
@@ -156,6 +183,10 @@ def main():
                 row["cpu_voltage_V"] = get_voltage()
             if args.throttle:
                 row["throttled_flags_hex"] = get_throttled_flags()
+            if args.hailo_temp:
+                row["hailo_temp_C"] = get_hailo_temp()
+            if args.hailo_clock:
+                row["hailo_clock_MHz"] = get_hailo_clock()
 
             writer.writerow(row)
             f.flush()
