@@ -1,0 +1,3 @@
+[submodule "hailo-apps"]
+	path = hailo-apps
+	url = https://github.com/sameer302/hailo-apps.git
