@@ -147,14 +147,14 @@ def main():
         fields.append("cpu_percent")
     if args.memory:
         fields.append("memory_percent")
-    if args.npu:
-        fields.append("npu_utilization_percent")
     if args.freq:
         fields.append("cpu_freq_MHz")
     if args.voltage:
         fields.append("cpu_voltage_V")
     if args.throttle:
         fields.append("throttled_flags_hex")
+    if args.npu:
+        fields.append("npu_utilization_percent")
     if args.hailo_temp:
         fields.append("hailo_temp_C")
     if args.hailo_clock:

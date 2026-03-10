@@ -1,0 +1,1 @@
+## This directory comprises of the virtual environment and codes necessary to run ultralytics yolo models on cpu.

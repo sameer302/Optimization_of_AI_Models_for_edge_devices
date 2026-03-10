@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DURATION=1800
-OUTPUT_DIR="./results"
+OUTPUT_DIR="./fps_and_system_metrics_csv_logs"
 
 cleanup() {
     echo "Stopping experiment..."
@@ -13,12 +13,15 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 timeout $DURATION python ../system_metrics_logger.py \
-  --cpu --temp --npu --memory --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops.csv" &
+  --cpu --temp --freq --voltage --memory --throttle --npu --hailo-temp --hailo-clock --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops.csv" &
 
-timeout $DURATION env HAILO_MONITOR=1 python ./yolo11n_npu.py \
-  --csv "$OUTPUT_DIR/yolo11n_fps_26tops.csv" \
+timeout $DURATION env HAILO_MONITOR=1 python /home/sameer/Desktop/optimization_of_ai_models/hailo-apps/hailo_apps/python/pipeline_apps/detection_simple/detection_simple.py \
+  --csv-path "$OUTPUT_DIR/yolo11n_fps_26tops.csv" \
   --input rpi \
-  --hef-path /home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo/yolov11n_hailo8.hef &
+  --width 640 \
+  --height 480 \
+  --batch-size 1 \
+  --hef-path /home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo11/yolov11n_hailo8.hef &
 
 wait
 echo "Experiment completed. Results are saved in $OUTPUT_DIR"
