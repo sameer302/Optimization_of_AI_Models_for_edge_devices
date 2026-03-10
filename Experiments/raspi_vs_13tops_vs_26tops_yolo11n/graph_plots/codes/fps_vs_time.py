@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from io import StringIO
 
-df = pd.read_csv("/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/yolo11n_camera_results/yolo11n_fps_26tops.csv")
+df = pd.read_csv("/home/sameer/Desktop/optimization_of_ai_models/Experiments/raspi_vs_13tops_vs_26tops_yolo11n/fps_and_system_metrics_csv_logs/yolo11n_fps_26tops.csv")
 
 # Convert timestamp
 df["timestamp"] = pd.to_datetime(df["timestamp"])
