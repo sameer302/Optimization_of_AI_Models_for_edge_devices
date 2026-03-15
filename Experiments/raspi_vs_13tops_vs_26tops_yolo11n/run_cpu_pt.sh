@@ -14,7 +14,7 @@ trap cleanup SIGINT SIGTERM
 # timeout $DURATION python ../system_metrics_logger.py \
 #   --cpu --temp --memory --freq --voltage --throttle --out "$OUTPUT_DIR/yolo11n_system_metrics_cpu_pt.csv" &
 
-timeout $DURATION python /home/sameer/Desktop/optimization_of_ai_models/ejtech_ultralytics/yolo_detect.py \
+timeout $DURATION taskset -c 2,3 python /home/sameer/Desktop/optimization_of_ai_models/ejtech_ultralytics/yolo_detect_two_threads.py \
   --csv "$OUTPUT_DIR/yolo11n_fps_cpu_pt1.csv" --capture_resolution 640x480 --output_resolution 1296x972 --source=picamera0  --model /home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo11/yolo11n.pt &
 
 wait
