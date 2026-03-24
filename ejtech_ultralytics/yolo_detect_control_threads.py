@@ -1,6 +1,6 @@
 import os
 
-NUM_THREADS = 2
+NUM_THREADS = 4
 
 os.environ["OMP_NUM_THREADS"] = str(NUM_THREADS)
 os.environ["OPENBLAS_NUM_THREADS"] = str(NUM_THREADS)

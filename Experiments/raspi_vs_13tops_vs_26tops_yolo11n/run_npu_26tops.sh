@@ -12,11 +12,11 @@ cleanup() {
 # Catch Ctrl+C and kill
 trap cleanup SIGINT SIGTERM
 
-timeout $DURATION python ../system_metrics_logger.py \
-  --cpu --temp --freq --voltage --memory --throttle --npu --hailo-temp --hailo-clock --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops.csv" &
+# timeout $DURATION python ../system_metrics_logger.py \
+#   --cpu --temp --freq --voltage --memory --throttle --npu --hailo-temp --hailo-clock --out "$OUTPUT_DIR/yolo11n_system_metrics_26tops.csv" &
 
 timeout $DURATION env HAILO_MONITOR=1 python /home/sameer/Desktop/optimization_of_ai_models/hailo-apps/hailo_apps/python/pipeline_apps/detection_simple/detection_simple.py \
-  --csv-path "$OUTPUT_DIR/yolo11n_fps_26tops.csv" \
+  --csv-path "$OUTPUT_DIR/yolo11n_fps_26tops1.csv" \
   --input rpi \
   --width 640 \
   --height 480 \
