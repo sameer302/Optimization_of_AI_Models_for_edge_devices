@@ -1,7 +1,11 @@
 import argparse
 import csv
+from dataclasses import fields
+from email import parser
+from html import parser
 import time
 import os
+from attrs import fields
 import psutil
 import subprocess
 from datetime import datetime
@@ -118,6 +122,19 @@ def get_hailo_clock():
         return None
     except Exception:
         return None
+    
+def get_running_threads_linux(pid):
+    import os
+    try:
+        count = 0
+        for tid in os.listdir(f"/proc/{pid}/task"):
+            with open(f"/proc/{pid}/task/{tid}/stat") as f:
+                state = f.read().split()[2]
+                if state == "R":
+                    count += 1
+        return count
+    except Exception:
+        return None
 
 
 def main():
@@ -133,6 +150,9 @@ def main():
     parser.add_argument("--hailo-clock", action="store_true", help="Log Hailo neural core clock rate (MHz)")
     parser.add_argument("--duration", type=int, default=0, help="Duration in seconds (0 = infinite)")
     parser.add_argument("--out", type=str, default="hardware_metrics.csv", help="Path to output CSV file")
+    parser.add_argument("--threads", action="store_true", help="Log total number of threads")
+    parser.add_argument("--running-threads", action="store_true", help="Log running (R state) threads")
+    parser.add_argument("--pid", type=int, default=None, help="PID of target process")
 
     args = parser.parse_args()
 
@@ -159,6 +179,10 @@ def main():
         fields.append("hailo_temp_C")
     if args.hailo_clock:
         fields.append("hailo_clock_MHz")
+    if args.threads:
+        fields.append("num_threads")
+    if args.running_threads:
+        fields.append("running_threads")
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
@@ -187,6 +211,10 @@ def main():
                 row["hailo_temp_C"] = get_hailo_temp()
             if args.hailo_clock:
                 row["hailo_clock_MHz"] = get_hailo_clock()
+            if args.threads and args.pid:
+                row["num_threads"] = psutil.Process(args.pid).num_threads()
+            if args.running_threads and args.pid:
+                row["running_threads"] = get_running_threads_linux(args.pid)
 
             writer.writerow(row)
             f.flush()

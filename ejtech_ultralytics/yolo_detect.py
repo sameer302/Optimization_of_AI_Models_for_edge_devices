@@ -45,7 +45,7 @@ csv_path = args.csv
 
 csv_file = open(csv_path, 'w', newline='')
 csv_writer = csv.writer(csv_file)
-csv_writer.writerow(['timestamp', 'frame_count', 'fps'])
+csv_writer.writerow(['timestamp', 'frame_count', 'fps', 'latency_ms'])
 
 # Check if model file exists and is valid
 if (not os.path.exists(model_path)):
@@ -142,8 +142,9 @@ bbox_colors = [(164,120,87), (68,148,228), (93,97,209), (178,182,133), (88,159,1
 
 # Initialize control and status variables
 avg_frame_rate = 0
-frame_rate_buffer = []
-fps_avg_len = 30
+time_buffer = []
+latency_buffer = []
+window_size = 10
 img_count = 0
 
 frame_count = 0
@@ -263,30 +264,35 @@ while True:
     elif key == ord('p') or key == ord('P'): # Press 'p' to save a picture of results on this frame
         cv2.imwrite('capture.png',frame)
     
-    # Calculate FPS for this frame
+    # Calculate FPS and latency for this window of frames and log to CSV
     t_stop = time.perf_counter()
-    frame_rate_calc = float(1/(t_stop - t_start))
 
-    # Append FPS result to frame_rate_buffer (for finding average FPS over multiple frames)
-    if len(frame_rate_buffer) >= fps_avg_len:
-        temp = frame_rate_buffer.pop(0)
-        frame_rate_buffer.append(frame_rate_calc)
-    else:
-        frame_rate_buffer.append(frame_rate_calc)
+    frame_time = t_stop - t_start
+    time_buffer.append(t_stop)
+    latency_buffer.append(frame_time * 1000)
 
-    # Calculate average FPS for past frames
-    avg_frame_rate = np.mean(frame_rate_buffer)
+    if len(time_buffer) >= window_size:
+        total_time = time_buffer[-1] - time_buffer[0]
+        fps = (len(time_buffer) - 1) / total_time
 
-    if frame_count % fps_avg_len == 0:
+        avg_latency = sum(latency_buffer) / len(latency_buffer)
+
+        avg_frame_rate = fps  # for display
+
         timestamp_iso = datetime.now().isoformat()
-        csv_writer.writerow([timestamp_iso, frame_count, round(avg_frame_rate, 3)])
+        csv_writer.writerow([
+            timestamp_iso,
+            frame_count,
+            round(fps, 3),
+            round(avg_latency, 3)
+        ])
         csv_file.flush()
+
+        time_buffer = []
+        latency_buffer = []
 
 csv_file.close()
 
-
-# Clean up
-print(f'Average pipeline FPS: {avg_frame_rate:.2f}')
 if source_type == 'video' or source_type == 'usb':
     cap.release()
 elif source_type == 'picamera':
