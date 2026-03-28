@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DURATION=1800
-OUTPUT_DIR="./cpu_results/all_zero_all"
+OUTPUT_DIR="./cpu_results/five_zero_all"
 
 cleanup() {
     echo "Stopping experiment..."
@@ -12,7 +12,7 @@ cleanup() {
 trap cleanup SIGINT SIGTERM
 
 # --- Start inference ---
-timeout $DURATION python /home/sameer/Desktop/optimization_of_ai_models/ejtech_ultralytics/yolo_detect.py \
+timeout $DURATION python /home/sameer/Desktop/optimization_of_ai_models/ejtech_ultralytics/yolo_detect_control_threads.py \
   --csv "$OUTPUT_DIR/yolo11n_fps_cpu_pt.csv" \
   --capture_resolution 640x480 \
   --source=picamera0 \

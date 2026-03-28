@@ -9,7 +9,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = str(NUM_THREADS)
 
 import torch
 torch.set_num_threads(NUM_THREADS)
-torch.set_num_interop_threads(1)
+torch.set_num_interop_threads(2)
 
 import sys
 import argparse
