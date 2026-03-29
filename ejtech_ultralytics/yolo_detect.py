@@ -154,8 +154,9 @@ while True:
 
     frame_count += 1
 
-    t_start = time.perf_counter()
-
+    t_start = time.perf_counter() # RHS returns a float value which is seconds since an arbitrary refrence point, it is measured by a high-resolution monotonic clock. 
+    # We use perf_counter instead of time.time() because perf_counter is more accurate for measuring short durations like frame processing time, and it is not affected by changes in the system clock.
+    # e.g., 123456.789012345 seconds
     # Load frame from image source
     if source_type == 'image' or source_type == 'folder': # If source is image or image folder, load the image using its filename
         if img_count >= len(imgs_list):
@@ -273,7 +274,7 @@ while True:
 
     if len(time_buffer) >= window_size:
         total_time = time_buffer[-1] - time_buffer[0]
-        fps = (len(time_buffer) - 1) / total_time
+        fps = (len(time_buffer) - 1) / total_time # we can use window_size instead of len(time_buffer)
 
         avg_latency = sum(latency_buffer) / len(latency_buffer)
 

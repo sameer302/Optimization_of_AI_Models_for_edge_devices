@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DURATION=1800
-OUTPUT_DIR="./cpu_results/five_zero_all"
+OUTPUT_DIR="./cpu_results/10_zero_all"
 
 cleanup() {
     echo "Stopping experiment..."
