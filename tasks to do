@@ -1,0 +1,5 @@
+1) add rationale behind noting down each of the system metric that we are logging
+2) add info about each of those system metric
+3) run raspi vs 26 tops vs 13 tops while noting latency also
+4) look at NPU's which provide different precision for different MAC units, unlike HAILO NPU which supports only int8 MAC operations there are NPU's which also support FP32, FP16 MAC operations also. 
+5) read about performance measurement metrics from the link https://hailo.ai/blog/evaluating-edge-ai-accelerator-performance-why-tops-are-not-enough/ 

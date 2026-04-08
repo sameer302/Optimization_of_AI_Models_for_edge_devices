@@ -1,10 +1,10 @@
-## AIM: To compare the performance of Vision model inference on raspberry pi 5 CPU Only, CPU + 13 TOPS NPU and CPU + 26 TOPS NPU.
+## AIM: To compare performance metrics during inference of vision models on raspberry pi 5 CPU Only, CPU + 13 TOPS NPU and CPU + 26 TOPS NPU.
 
 ### Hardware specifications:
 
 1) Raspberry PI 5 SBC
-2) HAILO 8L board with 13 TOPS NPU
-3) HAILO 8 board with 26 TOPS NPU
+2) HAILO 8L board with 13 TOPS(int8) NPU
+3) HAILO 8 board with 26 TOPS(int8) NPU
 4) 5 MP ov5647 Camera module
 
 ### Software specifications:
@@ -12,7 +12,17 @@
 1) Vision model:- YOLO11n
 2) Inference framework:- ultralytics, ncnn, hailort
 
-## rationale behind noting each of the system metric
+### Performance metrics being compared
+
+1) basic physical system metrics
+   1) Temeperature of cpu cores in degree celsius (temperature_C)
+   2) Percentage of CPU being utilized (cpu_percent)
+
+2) derived or resultant metrics
+   1) FPS
+   2) Latency
+
+## rationale behind logging each of the system metric
 
 1) core voltage (get_voltage function):-
 In both thermal throttling and undervoltage (power) throttling, the Raspberry Pi reduces the CPU frequency first. Due to Dynamic Voltage and Frequency Scaling (DVFS), a lower frequency allows the system to operate at a lower core voltage, so the voltage decreases afterward. In thermal throttling the trigger is high temperature, while in power throttling the trigger is low supply voltage, but in both cases the frequency reduction leads to reduced voltage and lower power consumption. The formula goes like P ∝ V^2 × f
@@ -23,46 +33,66 @@ Verifying TOPS for AI HAT+
 
 ## Post-experiment analysis
 
-### Observation 1 : Camera as bottleneck
-
 - Firstly to claim that there are any bottlenecks I need to show that there are some official numbers noted down by people based on some experimental observations and when I am repeating that experiment am unable to get those numbers and hence there must be some bottlenecks in my pipeline which are stopping me from achieveing those numbers.
 
 - so for now, I am benchmarking yolo11n model on HAILO 8L NPU and HAILO 8 NPU. For now lets go with HAILO 8 NPU and then we can follow similar method with HAILO 8L NPU also. 
 
-- so one of the important metrics that we need to consider when talking about NPUs' is TOPS (since NPU's are designed to operate on INT8 numbers). For HAILO 8, the advertized TOPS are 26 TOPS. This is the capacity of number of operations (each addition and multiply operation between two numbers, usually we count the number of MAC (multiply-accumulate) operations in our network and then considering 1 MAC = 2 operations we get the final count of TOPS). Now to find the thereotical maximum TOPS that we can achieve, we just look at the hardware specifications without running any code. For example, TOPS = N x F x 2 / 10^12, where N is the number of MAC units, F is the frequency at which each MAC unit is running and multiplication with 2 since each MAC comprises of two operations. Now particularly for HAILO 8 they have not publicly released the internal architecture from which we can verify the 26 TOPS speed but the main intuition is that this number is obtained from pure hardware specifications and not by running some code. This also makes this number host system independent as it is purely based on mathematical compute capacity. 
+- so one of the important metrics that we need to consider when talking about NPUs' is TOPS (since NPU's are designed to operate on INT8 numbers). For HAILO 8, the advertized TOPS are 26 TOPS (int8). 
+
+
+- with reference to the blog, https://hailo.ai/blog/evaluating-edge-ai-accelerator-performance-why-tops-are-not-enough/ TOPS is just a proxy for the physical properties of the device. 
+
+TOPS = ( 2 X MAC unit count x Frequency ) / 1 trillion
+
+A MAC unit can execute two operations (multiplication and addition to an accumulator) per clock cycle. A given NPU has set number of MAC units. then frequency dictates the clock speed and the TOPS Number quoted for processors is generally at the peak operating frequency. 
+
+- The blog post "Evaluating Edge AI Accelerator Performance: Why TOPS Are Not Enough" argues that the commonly used TOPS metric is an inadequate measure of an AI processor's real-world capabilities because it merely reflects theoretical hardware capacity based on synthetic workloads, rather than actual perception tasks. Since the correlation between advertised TOPS and actual performance is weak, relying on it or on outdated, low-resolution classification benchmarks like ResNet-50 does not give product designers an accurate picture of throughput or latency for modern downstream tasks such as object detection. Instead of focusing on single-dimensional metrics like TOPS, the post concludes that designers should evaluate edge AI processors by examining the accuracy-throughput tradeoff—specifically, determining the highest frame rate (FPS) achievable for a required level of accuracy on a specific, real-world application.
+
+
+- Now particularly for HAILO 8 they have not publicly released the internal architecture from which we can verify the 26 TOPS speed but the main intuition is that this number is obtained from pure hardware specifications and not by running some code. This also makes this number host system independent as it is purely based on mathematical compute capacity.
+
+- Although using the command `hailortcli fw-control identify --extended` we are able to get the output as `Neural Network Core Clock Rate: 400MHz` so considering frequency as 400MHz and 26 TOPS we can use the formula and back calculate the number of MAC units as 32,500. I have asked it on the community forum so will look into it. 
 
 - apart from the hardware specs derived speed, if we want to know the maximum possible speed then we should have a highly optimized code which will utilize the accelerator at its best and further we should also just consider the inference throughput that is obtained on the accelerator in order to eliminate any intermediate bottlenecks. Hailo has some in-built benchmarks present in Hailo Benchmark and TAPPAS library. Using these we can measure the isolated inference throughpt. 
-
-- we should explore Hailo Benchmark and TAPPAS library in order to find these benchmarking limits. 
 
 - So while setting up AI software on raspberry pi 5 we followed the instructions given on https://www.raspberrypi.com/documentation/computers/ai.html#hardware 
 Accordingly we had installed hailo-all which is a meta-package and comprises of many packages such as, hailort, hailo-tappas-core, rpicam-apps-hailo-postprocess, etc.
 
-- So if we do `hailo --h` we will get to see all the possible commands that come with hailo, one of those command is benchmark. So when we write `hailo benchmark path_to_hef`, it will run that particular compiled model on AI accelerator and we will get the raw accelerator specific inference throughput in terms of FPS and latency. So it will send some dummy data, process it and get it back, thats how it calculates that throughput. 
+- So if we do `hailo --h` we will get to see all the possible commands that come with hailo, one of those command is benchmark. So when we write `hailo benchmark path_to_hef`, it will run that particular compiled model on AI accelerator and we will get the raw accelerator specific inference throughput in terms of FPS and latency. So it will send some dummy data, process it and get it back, thats how it calculates that throughput.
 
+- We have documentation for the version of hailort that we have which explains all the commands that we can use like hailo benchmark and also what all more arguments we can give it as input, the link is https://hailo.ai/developer-zone/documentation/hailort-v4-23-0/?sp_referrer=cli/cli.html we also have one more link from the github repo, https://github.com/hailo-ai/hailo_model_zoo/blob/master/docs/BENCHMARKS.rst#using-datasets-from-the-hailo-model-zoo 
 
+- running these benchmark commands we get the output as,
+For batch size = 1:-  
+=======
+Summary
+=======
+FPS     (hw_only)                 = 104.908
+        (streaming)               = 104.91
+Latency (hw)                      = 7.75656 ms
 
+For batch size = 8:- 
+=======
+Summary
+=======
+FPS     (hw_only)                 = 217.185
+        (streaming)               = 217.126
+Latency (hw)                      = 22.1431 ms
 
+- Now to measure the TOPS speed of our NPU, we will have to run some code on it, we should know how many operations are being performed in that code (GFLOPs per frame) then observe how much time it takes to completely run that code (FPS) and then multiplying GFLOPs per frame into FPS will give us the TOPS speed. 
 
+- now we know that we can't run any normal code on the NPU but specially optimized codes generated using dataflow compiler (.hef file). Now these .hef files for almost all the standard object detection models (I am choosing vision models for now) are present on the HAILO Model Explorer Vision https://hailo.ai/products/hailo-software/model-explorer-vision/ 
 
+- but this is not all what is provided by hailo model explorer, they ran each of these model on a standard host system (System host: Intel® Core™ i5-9400 CPU @ 2.90GHz) and noted down the performance numbers obtained by them. If we look for yolo11n we can see following results,
 
+`Model       Input Resolution  Operations  FPS (Batch Size = 1) FPS (Batch Size = 8)`
+`Yolov11n    640x640x3         6.55G       185                  539`
 
-
-Now to measure the TOPS speed of our NPU, we will have to run some code on it, then observe how much time it takes to completely run that code and then divide the number of operations present in that code by the time taken. This will give us the TOPS speed. 
-
-- now we know that we can't run any normal code on the NPU but specially optimized codes generated using dataflow compiler (.hef file). Now these .hef files for almost all the standard object detection models (I am choosing vision models for now) are present on the HAILO MODEL ZOO https://github.com/hailo-ai/hailo_model_zoo/blob/master/docs/public_models/HAILO8/HAILO8_object_detection.rst 
-
-- but this is not all what is provided by hailo model zoo, they ran each of these model on a standard host system (System host: Intel® Core™ i5-9400 CPU @ 2.90GHz) and noted down the performance numbers obtained by them. If we look for yolo11n we can see, `yolov11n(model name)  39.0(mAP, Full Precision)  1.2(hardware degradation)  185(fps for batch size = 1)  539(fps for batch size = 2)  640x640x3(input resolution)  2.6(number of parameters in millions) 	6.55(number of operations per frame in giga)`
-
-- here if we look at the concept of hardware degradation we get to know of a very important concept. firstly, hardware degradation is the performance drop due to hardware constraints after compilation. formula for hardware degradation is, 
-`degradation = ideal theoretical fps / measured hardware fps` . We can calculate measured fps by running the model on our device but for ideal fps we may think that it would be in accordance to achieving 26 TOPS but that is not the case. What happens here is that, compiler(hailo dataflow compiler) estimates theoretical maximum FPS for any particular model assuming perfect scheduling on the hardware, this is done by analyzing the model in terms of model graph, layer shapes, parallel unit mapping, etc. This gives us the ideal FPS. In most of the cases it wont be near to the maximum 26 TOPS speed and we will shortly see why this is so. 
-
-- So coming back to the per model specifications that we have in the git repo, 
-`yolov11n(model name)  39.0(mAP, Full Precision)  1.2(hardware degradation)  185(fps for batch size = 1)  539(fps for batch size = 8)  640x640x3(input resolution)  2.6(number of parameters in millions) 	6.55(number of operations per frame in giga)` here if we multiply single batch fps speed with (185) with number of operations (6.55G) we get a TOPS speed of, 1.2 TOPS! ok lets do this for batch size = 8, then we get a speed of, 3.5 TOPS! ok lets consider the effect of hardware degradation, then for batch size = 1, new fps = 1.2 x 185 = 222 fps this implies speed = 1.45 TOPS! and for batch size = 8, new fps = 1.2 x 539 = 646.8 this implies speed = 4.2 TOPS. So the highest we can achieve with the given model is 4.2 TOPS. 
+- here if we multiply single batch fps speed (185) with number of operations (6.55G) we get a TOPS speed of, 1.2 TOPS! ok lets do this for batch size = 8, then we get a speed of, 3.5 TOPS!
 
 - Now we may think there must be some problem with the model due to which it is unable to give us the desired speed. So we look at a model with highest fps value which will surely be for batch size = 8.
 `tiny_yolov4 	19.2 	1.5 	1472 	1472 	416x416x3 	6.05 	6.92`
-here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fps, this implies speed = 15 TOPS! 
+here lets calculate the TOPS speed, so 6.92 x 1472 = 10 TOPS
 
 - so even in the best possible scenario we are not able to achieve the speed near to 26 TOPS. This raises two questions, first that how did those people claim of having the speed of 26 TOPS and secondly why are these models, even in the ideal case not able to achieve that TOPS speed ?
 
@@ -74,6 +104,7 @@ here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fp
 
 
 
+- Two questions to address, why HAILO MODEL ZOO TOPS speed is not matching with 26 TOPS and why my TOPS speed is not matching with hailo model zoo speed, even when am running in benchmark mode. 
 
 
 
@@ -104,6 +135,8 @@ here lets calculate the best case speed, so best case fps = 1.5 x 1472 = 2208 fp
     6) inference + record
     7) inference + display
     9) inference + record + display (slowest)
+
+### Observation 1 : Camera as bottleneck
 
 - The first bottleneck that may arise in the inference pipeline is the rate at which frames are being captured and sent to the CPU by the camera.
 

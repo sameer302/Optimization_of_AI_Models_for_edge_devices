@@ -1,0 +1,3 @@
+2026-04-08 15:23:02,747 - INFO - base_utils.py:54 - (hailo) Running command 'benchmark' with 'hailortcli'
+2026-04-08 15:47:33,044 - INFO - base_utils.py:54 - (hailo) Running command 'benchmark' with 'hailortcli'
+2026-04-08 15:48:29,822 - INFO - base_utils.py:54 - (hailo) Running command 'benchmark' with 'hailortcli'

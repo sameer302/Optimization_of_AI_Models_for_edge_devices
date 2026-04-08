@@ -16,6 +16,11 @@ LOG_INTERVAL = 1  # seconds
 def get_cpu():
     return psutil.cpu_percent(interval=None)
 
+# psutil.cpu_percent(interval=None) returns the overall CPU utilization percentage across all cores, not just one core.
+# For a 4-core system, it is an average across cores.
+# If only one core is fully busy and the other three are idle, it will report around 25.0.
+# If you want per-core values, use psutil.cpu_percent(interval=None, percpu=True).
+
 def get_cpu_freq():
     try:
         out = subprocess.check_output(["vcgencmd", "measure_clock", "arm"], text=True)
@@ -23,12 +28,18 @@ def get_cpu_freq():
     except:
         return None
     
+# vcgencmd measure_clock arm reports the shared ARM cluster clock.
+# The Pi 5 CPU cores run at the same cluster frequency, not separate per-core frequencies.
+    
 def get_voltage():
     try:
         out = subprocess.check_output(["vcgencmd", "measure_volts", "core"], text=True)
         return float(out.strip().split("=")[1].replace("V", ""))
     except:
         return None
+    
+# vcgencmd measure_volts core returns the SoC/core rail voltage for the cluster.
+# The Pi does not expose separate voltage values per CPU core to standard tools.
 
 def get_throttled_flags():
     try:
@@ -36,6 +47,9 @@ def get_throttled_flags():
         return out.strip().split("=")[1]  # hex flags
     except:
         return None
+    
+# On Raspberry Pi, throttling is reported for the SoC/ARM cluster as a whole.
+# The vcgencmd get_throttled flags are not per-core; they reflect overall CPU/SoC throttling state.
 
 def get_memory():
     return psutil.virtual_memory().percent
