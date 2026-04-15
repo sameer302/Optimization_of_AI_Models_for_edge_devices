@@ -2027,3 +2027,9 @@
 [2026-03-08 23:00:22.295] [8493] [HailoRT] [error] [control.cpp:238] [log_detailed_fw_error] Firmware major status: CONTROL_PROTOCOL_STATUS_UNSUPPORTED_DEVICE
 [2026-03-08 23:00:22.295] [8493] [HailoRT] [error] [control.cpp:245] [log_detailed_fw_error] Firmware minor status: CONTROL_PROTOCOL_STATUS_UNSUPPORTED_DEVICE
 [2026-03-08 23:00:22.295] [8493] [HailoRT] [error] [control.cpp:262] [log_detailed_fw_error] Opcode HAILO_CONTROL_OPCODE_SET_POWER_MEASUEMENT is not supported on the current board.
+[2026-04-13 13:44:41.074] [81883] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-04-13 13:44:41.074] [81883] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.23.0
+[2026-04-13 13:44:41.075] [81883] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.23.0
+[2026-04-13 13:51:51.777] [86448] [HailoRT] [info] [device.cpp:51] [Device] OS Version: Linux 6.12.62+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.12.62-1+rpt1 (2025-12-18) aarch64
+[2026-04-13 13:51:51.777] [86448] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.23.0
+[2026-04-13 13:51:51.778] [86448] [HailoRT] [info] [control.cpp:113] [control__parse_identify_results] firmware_version is: 4.23.0
