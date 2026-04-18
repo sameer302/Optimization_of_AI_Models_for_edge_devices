@@ -1,12 +1,11 @@
 #!/bin/bash
 
-OUTPUT_DIR="/home/sameer/Desktop/optimization_of_ai_models/Experiments/TOPS_measurement/Exp2_fps_comparison_for_PCIe_Gen2.0_vs_Gen3.0/csv_results/ultra_performance_mode_results"
+OUTPUT_DIR="/home/sameer/Desktop/optimization_of_ai_models/Experiments/Temperature_measurement/Exp1_temperature_monitoring_for_Hailo-8_NPU/csv_results/performance_mode"
 HEF_PATH="/home/sameer/Desktop/optimization_of_ai_models/AIML_models/computer_vision/detection/yolo11/yolov11n_hailo8.hef"
 SYS_LOGGER_PATH="/home/sameer/Desktop/optimization_of_ai_models/Experiments/system_metrics_logger.py"
 
 
-BATCH_SIZES=({1..63}) # Add more batch sizes as needed
-SLEEP_TIME=10 # Time to wait between runs, adjust as needed
+BATCH_SIZE=40 # Add more batch sizes as needed
 
 cleanup() {
     echo "Stopping experiment..."
@@ -21,27 +20,21 @@ cleanup() {
 # Catch Ctrl+C and kill
 trap cleanup SIGINT SIGTERM # This sets up a trap to catch SIGINT (Ctrl+C) and SIGTERM (system termination) signals, ensuring that the cleanup function is called to stop the experiment gracefully when the user interrupts it.
 
-for BATCH in "${BATCH_SIZES[@]}"; do
-    echo "Running benchmark with batch size: $BATCH"
+echo "Running benchmark with batch size: $BATCH_SIZE"
 
-    python $SYS_LOGGER_PATH \
-    --npu --hailo-temp --hailo-clock --out "$OUTPUT_DIR/NPU_performance_1min_bs${BATCH}.csv" & pid1=$!
+python $SYS_LOGGER_PATH \
+--npu --hailo-temp --hailo-clock --out "$OUTPUT_DIR/NPU_performance_3hrs_bs${BATCH_SIZE}.csv" & pid1=$!
 
-    env HAILO_MONITOR=1 hailo benchmark "$HEF_PATH" \
-        --time-to-run 60 \
-        --batch-size $BATCH \
-        --power-mode ultra_performance \
-        --csv "$OUTPUT_DIR/Inference_performance_1min_bs${BATCH}.csv" & pid2=$!
+env HAILO_MONITOR=1 hailo benchmark "$HEF_PATH" \
+    --time-to-run 10800 \
+    --batch-size $BATCH_SIZE \
+    --power-mode performance \
+    --csv "$OUTPUT_DIR/Inference_performance_3hrs_bs${BATCH_SIZE}.csv" & pid2=$!
 
-    # Wait for the benchmark to finish
-    wait $pid2
+# Wait for the benchmark to finish
+wait $pid2
 
-    # Kill the logger after benchmark completes
-    kill $pid1 2>/dev/null
-    echo "completed batch size: $BATCH"
-    echo "Sleeping for $SLEEP_TIME seconds before starting the next batch size..."
-    sleep $SLEEP_TIME # This adds a delay between runs to allow the system to stabilize before starting the next benchmark.
-done
-
-
+# Kill the logger after benchmark completes
+kill $pid1 2>/dev/null
+echo "completed batch size: $BATCH_SIZE"
 echo "Experiment completed for performance mode. Results are saved in $OUTPUT_DIR"
