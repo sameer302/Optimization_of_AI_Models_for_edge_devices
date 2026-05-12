@@ -85,7 +85,7 @@
     from datetime import datetime
     ```
 
-    In the above code we are restricting certain system level libraries to break into the number of threads specified by us. Most of these libraies, if left free will break into number of threads corresponding to the number of avilable cores (overall 20 by default) but when we set the number of threads to be 3, the number of threads reduces to 18.
+    In the above code we are restricting certain system level libraries to break into the number of threads specified by us. Most of these libraies, if left free will break into number of threads corresponding to the number of available cores (overall 20 by default) but when we set the number of threads to be 3, the number of threads reduces to 18.
     Similarly if we set the number of threads to 4 or higher then we will see that the total number of threads that our program breaks into will increase (22/21 from 20). This is because, total threads = base threads + sum (each library's thread pool)
     
     So we saw that the system level libraries tend to break into number of threads so that true parallelism should be achieved which is possible only when number of threads = logical computing units (number of cores). Then why do we see the total number of threads for our inference program being upto 20 ? This is because the extra threads come from other components such as, Camera (OpenCV / Picamera), GUI, Python runtime, Pytorch backend, etc. Total threads is the sum of all thread pools. 

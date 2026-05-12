@@ -1,2 +1,0 @@
-- Firstly activate the necessary virtual environment by using the command `source vnv_.sh_path`
-- Then go to Experiments folder and inside the particular experiment run the bash script by, ./filename.sh command
